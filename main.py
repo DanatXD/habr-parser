@@ -1,4 +1,3 @@
-import time
 import requests
 from bs4 import BeautifulSoup
 
@@ -33,24 +32,21 @@ for article in articles:
         continue
     date = time_tag.get("datetime")
 
-    try:
-        article_response = requests.get(link, headers=headers, timeout=10)
-        article_response.raise_for_status()
-    except requests.RequestException:
-        continue
+    preview = ""
+    for lead in article.find_all("div", class_="tm-article-snippet__lead"):
+        preview += " " + lead.text
+    for lead in article.find_all("div", class_="article-formatted-body"):
+        preview += " " + lead.text
+    if not preview.strip():
+        paragraphs = article.find_all("p")
+        preview = " ".join(p.text for p in paragraphs)
 
-    article_soup = BeautifulSoup(article_response.text, "lxml")
-    body = article_soup.find("div", class_="article-formatted-body")
-    if body is None:
-        body = article_soup.find("div", id="post-content-body")
-    if body is None:
-        continue
+    hubs = article.find_all("a", class_="tm-publication-hub__link")
+    hub_text = " ".join(h.text for h in hubs)
 
-    text = body.text.lower()
+    full_text = (title + " " + preview + " " + hub_text).lower()
 
     for keyword in KEYWORDS:
-        if keyword.lower() in text:
+        if keyword.lower() in full_text:
             print(f"{date} – {title} – {link}")
             break
-
-    time.sleep(0.5)
